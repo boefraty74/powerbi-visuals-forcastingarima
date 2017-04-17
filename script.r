@@ -301,7 +301,7 @@ sizeLabel = 12
 
 #PBI_PARAM Size of warnings font
 #Type:numeric , Default:cexSub*12, Range:NA, PossibleValues:[1,50], Remarks: NA
-sizeWarn = cexSub*12
+sizeWarn = cexSub*10
 
 #PBI_PARAM Size of ticks on axes 
 sizeTicks = 8
@@ -340,13 +340,17 @@ cutStr2Show = function(strText, strCex = 0.8, abbrTo = 100, isH = TRUE, maxChar 
 
 
 # Find number of ticks on X axis 
-FindTicksNum = function(n,f)
+FindTicksNum = function(n,f, flag_ggplot = TRUE)
 {
-  tn = 10 # default minimum
+  factorGG = (if(flag_ggplot) 0.525 else 1)
+  
+  tn = 10* factorGG # default minimum
+  mtn = 20 * factorGG # default max
+  
   D = 2 # tick/inch
   numCircles = n/f
   xSize = par()$din[1]
-  tn = max(round(xSize*D),tn)
+  tn = min(max(round(xSize*D*factorGG),tn),mtn)
   return(tn) 
 }
 
@@ -426,7 +430,7 @@ findFreqFromDates1 = function(dates, targetS = "Automatic")
 {
   freq = 1
   N = length(dates)
-  nnn = c("hour", "day", "week", "month", "quater", "year")
+  nnn = c("hour", "day", "week", "month", "quarter", "year")
   seasons = rep(NaN,6)
   names(seasons) = nnn
   perSeason = seasons
@@ -436,7 +440,7 @@ findFreqFromDates1 = function(dates, targetS = "Automatic")
   seasons["week"]=round(as.numeric(difftime(dates[length(dates)],dates[1]),units="weeks"))
   seasons["month"] = seasons["day"]/30
   seasons["year"] = seasons["day"]/365.25
-  seasons["quater"] = seasons["year"]*4
+  seasons["quarter"] = seasons["year"]*4
   
   perSeason = N/seasons
   
@@ -446,7 +450,7 @@ findFreqFromDates1 = function(dates, targetS = "Automatic")
   if(freq < 2) # if TRUE, target season factor is not good 
     freq = 1
   
-  for( s in rev(nnn)) # check year --> Quater --> etc
+  for( s in rev(nnn)) # check year --> quarter --> etc
     if(freq == 1 )
       freq = freqSeason1(seasons[s],perSeason[s])
   
@@ -547,7 +551,7 @@ pbiWarning = NULL
 if(!exists("Date") || !exists("Value"))
 {
   dataset=data.frame()
-  pbiWarning  = cutStr2Show("Both 'Date' and 'Value' fields are required.", strCex = 1.1, partAvailable = 0.95)
+  pbiWarning  = cutStr2Show("Both 'Date' and 'Value' fields are required.", strCex = 1.55, partAvailable = 0.95)
   timeSeries=ts()
   showWarnings=TRUE
 }else{
@@ -561,8 +565,11 @@ if(!exists("Date") || !exists("Value"))
   
   
   if(N==0 && exists("Date") && nrow(Date)>0 &&  exists("Value")){
-    pbiWarning1  = cutStr2Show("Wrong date type. Only 'Date', 'Time', 'Date/Time' are allowed without hierarchy", strCex = 1.1, partAvailable = 0.95)
-    pbiWarning = paste(pbiWarning1, pbiWarning, sep ="\n")
+    
+    pbiWarning1  = cutStr2Show("Wrong date type.", strCex = sizeWarn/6, partAvailable = 0.85)
+    pbiWarning2 = cutStr2Show("Only 'Date', 'Time', 'Date/Time' are allowed without hierarchy. ", strCex = sizeWarn/6, partAvailable = 0.85)
+    pbiWarning = paste(pbiWarning1, pbiWarning2, pbiWarning, sep ="<br>")
+    
     timeSeries=ts()
     showWarnings=TRUE
   }else {
@@ -574,9 +581,9 @@ if(!exists("Date") || !exists("Value"))
     
     if((any(is.na(parsed_dates))))
     {
-      pbiWarning1  = cutStr2Show("Wrong or corrupted 'Date'.", strCex = 1.1, partAvailable = 0.95)
-      pbiWarning2  = cutStr2Show("Only 'Date', 'Time', 'Date/Time' types are allowed without hierarchy", strCex = 1.1, partAvailable = 0.95)
-      pbiWarning = paste(pbiWarning1, pbiWarning2, pbiWarning, sep ="\n")
+      pbiWarning1  = cutStr2Show("Wrong or corrupted 'Date'.", strCex = sizeWarn/6, partAvailable = 0.85)
+      pbiWarning2  = cutStr2Show("Only 'Date', 'Time', 'Date/Time' types are allowed without hierarchy", strCex = sizeWarn/6, partAvailable = 0.85)
+      pbiWarning = paste(pbiWarning1, pbiWarning2, pbiWarning, sep ="<br>")
       timeSeries=ts()
       showWarnings=TRUE
     }
@@ -666,11 +673,15 @@ if(length(timeSeries)>=minPoints) {
   if(showInfo)
   {
     pbiInfo=paste(pbiInfo,"", fit$method, sep="")
-    pbiInfo = cutStr2Show(pbiInfo,strCex = cexSub, isH = TRUE, maxChar = 20)
+    #pbiInfo = cutStr2Show(pbiInfo,strCex = cexSub, isH = TRUE, maxChar = 20)
+    pbiInfo= cutStr2Show(pbiInfo, strCex = sizeWarn / 6, isH = TRUE, partAvailable = 0.9, maxChar = 20)
   }
   
-  labTime = cutStr2Show(labTime, strCex =1.1, isH = TRUE)
-  labValue = cutStr2Show(labValue, strCex =1.1, isH = FALSE)
+  # labTime = cutStr2Show(labTime, strCex =1.1, isH = TRUE)
+  # labValue = cutStr2Show(labValue, strCex =1.1, isH = FALSE)
+  
+  labTime = cutStr2Show(labTime, strCex = sizeLabel/6, isH = TRUE, partAvailable = 0.8)
+  labValue = cutStr2Show(labValue, strCex = sizeLabel/6, isH = FALSE, partAvailable = 0.8)
   
   # plot.forecast(prediction, lwd=pointCex, col=alpha(pointsCol,transparency), fcol=alpha(forecastCol,transparency), flwd = pointCex, shaded=fillConfidenceLevels,
   #               main = "", sub = pbiInfo, col.sub = infoTextColor, cex.sub = cexSub, xlab = labTime, ylab = labValue, xaxt = "n")
@@ -741,7 +752,7 @@ if(length(timeSeries)>=minPoints) {
     p1a <- p1a +  theme(axis.text.x  = element_text(angle = getAngleXlabels(x_with_forcast_formatted), 
                                                     hjust=1, size = sizeTicks, colour = "gray60"),
                         axis.text.y  = element_text(vjust = 0.5, size = sizeTicks, colour = "gray60"),
-                        plot.title  = element_text(hjust = 0.5, size = sizeWarn), 
+                        plot.title  = element_text(hjust = 0.5, size = sizeWarn, colour = infoTextColor), 
                         axis.title=element_text(size =  sizeLabel),
                         axis.text=element_text(size =  sizeTicks),
                         panel.border = element_blank())

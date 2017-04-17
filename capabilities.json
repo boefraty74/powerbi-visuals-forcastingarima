@@ -250,8 +250,8 @@
                 "value": "month"
               },
               {
-                "displayName": "quater",
-                "value": "quater"
+                "displayName": "quarter",
+                "value": "quarter"
               },
               {
                 "displayName": "year",
@@ -643,7 +643,7 @@
       }
     },
     "settings_additional_params": {
-      "displayName": "Info and warnings",
+      "displayName": "Info",
       "properties": {
         "show": {
           "type": {
