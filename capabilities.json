@@ -49,7 +49,7 @@
         },
         "script": {
           "scriptProviderDefault": "R",
-          "scriptOutputType": "png",
+          "scriptOutputType": "html",
           "source": {
             "objectName": "rcv_script",
             "propertyName": "source"
