@@ -25,6 +25,23 @@
 #
 # REFERENCES: https://en.wikipedia.org/wiki/Autoregressive_integrated_moving_average, https://www.otexts.org/fpp/8
 
+source('./r_files/flatten_HTML.r')
+
+############### Library Declarations ###############
+libraryRequireInstall("ggplot2");
+libraryRequireInstall("plotly")
+####################################################
+
+#DEBUG 
+fileRda = "C:/Users/boefraty/projects/PBI/R/tempData.Rda"
+if(file.exists(dirname(fileRda)))
+{
+  if(Sys.getenv("RSTUDIO")!="")
+    load(file= fileRda)
+  else
+    save(list = ls(all.names = TRUE), file=fileRda)
+}
+
 
 
 Sys.setlocale("LC_ALL","English") # internationalization
@@ -238,7 +255,7 @@ libraryRequireInstall("zoo")
 ###############Internal parameters definitions#################
 ##PBI_PARAM: Should warnings text be displayed?
 #Type:logical, Default:TRUE, Range:NA, PossibleValues:NA, Remarks: NA
-showWarnings = TRUE
+showWarnings = FALSE
 
 
 #PBI_PARAM Minimal number of points
@@ -276,6 +293,21 @@ if(confInterval1 > confInterval2)
 
 lowerConfInterval = confInterval1
 upperConfInterval = confInterval2
+
+
+#PBI_PARAM Size of labels on axes
+#Type:numeric , Default:12, Range:NA, PossibleValues:[1,50], Remarks: NA
+sizeLabel = 12
+
+#PBI_PARAM Size of warnings font
+#Type:numeric , Default:cexSub*12, Range:NA, PossibleValues:[1,50], Remarks: NA
+sizeWarn = cexSub*12
+
+#PBI_PARAM Size of ticks on axes 
+sizeTicks = 8
+
+#PBI_PARAM opacity of conf interval color
+transparencyConfInterval = 0.3 
 
 
 ###############Internal functions definitions#################
@@ -488,6 +520,26 @@ FindBoxCoxLambda = function(timeSeries, boxCoxTransform, lambda = NULL,  mymetho
 }
 
 
+getAngleXlabels = function(mylabels)
+{
+  NL = length(mylabels)
+  NC = nchar(mylabels[1])*1.1
+  
+  lenPerTick = par()$din[1]/(NL*NC)
+  
+  #lot of space -> 0 
+  if(lenPerTick > 0.15)
+    return(0)
+  
+  # no space --> -90
+  if(lenPerTick < 0.070)
+    return(90)
+  
+  # few space --> - 45
+  return(45)
+  
+}
+
 
 ###############Upfront input correctness validations (where possible)#################
 pbiWarning = NULL
@@ -620,8 +672,11 @@ if(length(timeSeries)>=minPoints) {
   labTime = cutStr2Show(labTime, strCex =1.1, isH = TRUE)
   labValue = cutStr2Show(labValue, strCex =1.1, isH = FALSE)
   
-  plot.forecast(prediction, lwd=pointCex, col=alpha(pointsCol,transparency), fcol=alpha(forecastCol,transparency), flwd = pointCex, shaded=fillConfidenceLevels,
-                main = "", sub = pbiInfo, col.sub = infoTextColor, cex.sub = cexSub, xlab = labTime, ylab = labValue, xaxt = "n")
+  # plot.forecast(prediction, lwd=pointCex, col=alpha(pointsCol,transparency), fcol=alpha(forecastCol,transparency), flwd = pointCex, shaded=fillConfidenceLevels,
+  #               main = "", sub = pbiInfo, col.sub = infoTextColor, cex.sub = cexSub, xlab = labTime, ylab = labValue, xaxt = "n")
+  
+ 
+  
   
   
   NpF = (length(parsed_dates))+forecastLength
@@ -633,17 +688,139 @@ if(length(timeSeries)>=minPoints) {
   x_with_f = as.POSIXlt(seq(from=parsed_dates[1], to = (parsed_dates[1]+interval*(length(parsed_dates)+forecastLength)), length.out = numTicks))
   x_with_forcast_formatted = flexFormat(dates = x_with_f, orig_dates = parsed_dates, freq = freq)
   
+  
+  x_full = as.POSIXlt(seq(from=parsed_dates[1], to = tail(parsed_dates,1), length.out = length(parsed_dates)))
+  f_full = as.POSIXlt(seq(from=tail(parsed_dates,1), to = (tail(parsed_dates,1)+interval*(forecastLength)), length.out = forecastLength+1))
+  
+  
+  
   correction = (NpF-1)/(numTicks-1) # needed due to subsampling of ticks
-  axis(1, at = 1+correction*((0:(numTicks-1))/freq), labels = x_with_forcast_formatted)
+  #axis(1, at = 1+correction*((0:(numTicks-1))/freq), labels = x_with_forcast_formatted)
+  
+  
+  
+  if(!showWarnings)
+  {
+    
+    #HTML
+    #historical data
+    x1 = seq(1,length(prediction$x))
+    y1 = as.numeric(prediction$x)
+    
+    p1a<-ggplot(data=NULL,aes(x=x1,y=y1) )
+    p1a<-p1a+geom_line(col=alpha(pointsCol,transparency), lwd = pointCex)
+    
+    #forecast
+    x2 = seq(length(prediction$x),length.out = length(prediction$mean))
+    y2 = as.numeric(prediction$mean)
+    
+    
+    p1a <- p1a + geom_line(inherit.aes = FALSE ,data = NULL, mapping = aes(x = x2, y = y2), col=alpha(forecastCol,transparency), lwd = pointCex)
+    
+    #conf intervals
+    if(upperConfInterval>0.01)
+    {
+      lower1 = as.numeric(prediction$lower[,1])
+      upper1 = as.numeric(prediction$upper[,1])
+      lower2 = as.numeric(prediction$lower[,2])
+      upper2 = as.numeric(prediction$upper[,2])
+      id = x2
+      
+      names(lower1) = names(lower2) = names(upper1)= names(upper2) = names(f_full) = id   
+      cf_full = as.character(f_full)
+      
+      p1a <- p1a + geom_ribbon( inherit.aes = FALSE , mapping = aes(x = id, ymin = lower1 , ymax = upper1), fill = "blue4", alpha = 0.25)
+      p1a <- p1a + geom_ribbon( inherit.aes = FALSE , mapping = aes(x = id, ymin = lower2, ymax = upper2), fill = "gray50", alpha = 0.25)
+      
+    }
+    
+    #design 
+    p1a <- p1a + labs (title = pbiInfo, caption = NULL) + theme_bw() 
+    p1a <- p1a + xlab(labTime) + ylab(labValue) 
+    p1a <- p1a + scale_x_continuous(breaks = seq(1,length(prediction$x) + length(prediction$mean)-1, length.out = numTicks), labels = x_with_forcast_formatted) 
+    p1a <- p1a +  theme(axis.text.x  = element_text(angle = getAngleXlabels(x_with_forcast_formatted), 
+                                                    hjust=1, size = sizeTicks, colour = "gray60"),
+                        axis.text.y  = element_text(vjust = 0.5, size = sizeTicks, colour = "gray60"),
+                        plot.title  = element_text(hjust = 0.5, size = sizeWarn), 
+                        axis.title=element_text(size =  sizeLabel),
+                        axis.text=element_text(size =  sizeTicks),
+                        panel.border = element_blank())
+    
+    
+    
+  }
+  
   
   
 } else{ #empty plot
-  plot.new()
+  # plot.new()
+  # showWarnings = TRUE
+  # pbiWarning1 = cutStr2Show("Not enough data points", strCex = 1.1, partAvailable = 0.95)
+  # pbiWarning<-paste(pbiWarning, pbiWarning1 , sep="\n")
+  
   showWarnings = TRUE
-  pbiWarning1 = cutStr2Show("Not enough data points", strCex = 1.1, partAvailable = 0.95)
-  pbiWarning<-paste(pbiWarning, pbiWarning1 , sep="\n")
+  pbiWarning1  = cutStr2Show("Not enough data points", strCex = sizeWarn/6, partAvailable = 0.85)
+  pbiWarning<-paste(pbiWarning, pbiWarning1 , sep="<br>")
+  
+  
 }
 
 #add warning as subtitle
-if(showWarnings)
-  title(main=NULL, sub=pbiWarning, outer=FALSE, col.sub = infoTextColor, cex.sub=1.1)
+# if(showWarnings)
+#   title(main=NULL, sub=pbiWarning, outer=FALSE, col.sub = infoTextColor, cex.sub=1.1)
+
+
+#add warning as subtitle
+if(showWarnings && !is.null(pbiWarning))
+{
+  p1a = ggplot() + labs (title = pbiWarning, caption = NULL) + theme_bw() +
+    theme(plot.title  = element_text(hjust = 0.5, size = sizeWarn), 
+          axis.title=element_text(size =  sizeLabel),
+          axis.text=element_text(size =  sizeTicks),
+          panel.border = element_blank())
+  ggp <- plotly_build(p1a)
+}else{
+  
+  # massage some plot atributes to make transition from ggplot to plotly smooth 
+  ggp <- plotly_build(p1a)
+  ggp$x$data[[1]]$text = paste(labTime, ": ", x_full, "<br>", labValue, ": ", round(y1,2) , sep ="" ) 
+  ggp$x$data[[2]]$text = paste(labTime, ": ", f_full, "<br>", labValue, ": ", round(y2,2) , sep ="" ) 
+  
+  if(length(ggp$x$data)>=3)
+  {
+    iii =  as.character(ggp$x$data[[3]]$x)
+    ggp$x$data[[3]]$text = paste(labTime, ": ", cf_full[iii], "<br> lower: ", lower1[iii],"<br> upper: ", upper1[iii], sep ="" ) 
+  }
+  
+  if(length(ggp$x$data)>=4)
+  {
+    iii =  as.character(ggp$x$data[[4]]$x)
+    ggp$x$data[[4]]$text = paste(labTime, ": ", cf_full[iii], "<br> lower: ", lower2[iii],"<br> upper: ", upper2[iii], sep ="" ) 
+  }
+  
+  
+  
+  ggp$x$layout$margin$l = ggp$x$layout$margin$l+10
+  #ggp$x$layout$margin$r = 0
+  if(ggp$x$layout$xaxis$tickangle < -40)
+    ggp$x$layout$margin$b = ggp$x$layout$margin$b+40
+  
+}
+
+############# Create and save widget ###############
+
+p <- ggp
+
+disabledButtonsList <- list('toImage', 'sendDataToCloud', 'zoom2d', 'pan', 'pan2d', 'select2d', 'lasso2d', 'hoverClosestCartesian', 'hoverCompareCartesian')
+p$x$config$modeBarButtonsToRemove = disabledButtonsList
+
+p <- config(p, staticPlot = FALSE, editable = FALSE, sendData = FALSE, showLink = FALSE,
+            displaylogo = FALSE,  collaborate = FALSE, cloud=FALSE)
+
+internalSaveWidget(p, 'out.html')
+####################################################
+#display in R studio
+if(Sys.getenv("RSTUDIO")!="")
+  print(p)
+
+
