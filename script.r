@@ -293,7 +293,7 @@ sizeLabel = 12
 
 #PBI_PARAM Size of warnings font
 #Type:numeric , Default:cexSub*10, Range:NA, PossibleValues:[1,50], Remarks: NA
-sizeWarn = cexSub*10
+sizeWarn = cexSub*8
 
 #PBI_PARAM Size of ticks on axes 
 sizeTicks = 8
@@ -651,8 +651,10 @@ if(length(timeSeries)>=minPoints) {
   
   
   fit$method = GetFitMethodString(fit,withSeasonality, infoCriteria)
-  if(lowerConfInterval==0)
-    lowerConfInterval = NULL; 
+  
+  if(lowerConfInterval <= 0.1)
+    lowerConfInterval = NULL;
+  
   prediction = forecast(fit, level=c(lowerConfInterval,upperConfInterval), h=forecastLength)
   
   lastValue = tail(prediction$x,1)
@@ -710,20 +712,55 @@ if(length(timeSeries)>=minPoints) {
     p1a <- p1a + geom_line(inherit.aes = FALSE ,data = NULL, mapping = aes(x = x2, y = y2), col=alpha(forecastCol,transparency), lwd = pointCex)
     
     #conf intervals
-    if(upperConfInterval>0.01)
+    
+    if(!is.null(lowerConfInterval))
     {
-      lower1 = as.numeric(prediction$lower[,1])
-      upper1 = as.numeric(prediction$upper[,1])
-      lower2 = as.numeric(prediction$lower[,2])
-      upper2 = as.numeric(prediction$upper[,2])
+      lower2 = lower1 = as.numeric(prediction$lower[,1])
+      upper2 = upper1 = as.numeric(prediction$upper[,1])
       id = x2
       
-      names(lower1) = names(lower2) = names(upper1)= names(upper2) = names(f_full) = id   
+      names(lower2) = names(upper2) = names(lower1) = names(upper1)=  names(f_full) = id   
       cf_full = as.character(f_full)
       
       p1a <- p1a + geom_ribbon( inherit.aes = FALSE , mapping = aes(x = id, ymin = lower1 , ymax = upper1), fill = "blue4", alpha = 0.25)
+    }
+    
+    if(upperConfInterval>0.01)
+    {
+      if(!is.null(lowerConfInterval))
+      {  
+        lower2 = as.numeric(prediction$lower[,2])
+        upper2 = as.numeric(prediction$upper[,2])
+      }
+      else
+        {  
+          lower1 = lower2 = as.numeric(prediction$lower[,1])
+          upper1 =upper2 = as.numeric(prediction$upper[,1])
+        } 
+      
+      
+      id = x2
+      
+      names(lower2) = names(upper2) = names(lower1) = names(upper1)=  names(f_full) = id 
+      cf_full = as.character(f_full)
+      
+     
       p1a <- p1a + geom_ribbon( inherit.aes = FALSE , mapping = aes(x = id, ymin = lower2, ymax = upper2), fill = "gray50", alpha = 0.25)
     }
+    # if(upperConfInterval>0.01)
+    # {
+    #   lower1 = as.numeric(prediction$lower[,1])
+    #   upper1 = as.numeric(prediction$upper[,1])
+    #   lower2 = as.numeric(prediction$lower[,2])
+    #   upper2 = as.numeric(prediction$upper[,2])
+    #   id = x2
+    #   
+    #   names(lower1) = names(lower2) = names(upper1)= names(upper2) = names(f_full) = id   
+    #   cf_full = as.character(f_full)
+    #   
+    #   p1a <- p1a + geom_ribbon( inherit.aes = FALSE , mapping = aes(x = id, ymin = lower1 , ymax = upper1), fill = "blue4", alpha = 0.25)
+    #   p1a <- p1a + geom_ribbon( inherit.aes = FALSE , mapping = aes(x = id, ymin = lower2, ymax = upper2), fill = "gray50", alpha = 0.25)
+    # }
     
     #design 
     p1a <- p1a + labs (title = pbiInfo, caption = NULL) + theme_bw() 
