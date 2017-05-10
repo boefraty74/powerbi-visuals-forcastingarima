@@ -568,43 +568,48 @@ if(!exists("Date") || !exists("Value"))
     timeSeries=ts()
     showWarnings=TRUE
   }else {
-    
-    
-    dataset = dataset[order(dataset[,1]),]
-    parsed_dates=strptime(dataset[,1],"%Y-%m-%dT%H:%M:%S",tz="UTC")
-    labTime = names(Date)[1]
-    
-    if((any(is.na(parsed_dates))))
+    if(N < minPoints)
     {
-      pbiWarning1  = cutStr2Show("Wrong or corrupted 'Date'.", strCex = sizeWarn/6, partAvailable = 0.85)
-      pbiWarning2  = cutStr2Show("Only 'Date', 'Time', 'Date/Time' types are allowed without hierarchy", strCex = sizeWarn/6, partAvailable = 0.85)
-      pbiWarning = paste(pbiWarning1, pbiWarning2, pbiWarning, sep ="<br>")
       timeSeries=ts()
       showWarnings=TRUE
     }
     else
     {
-      interval = difftime(parsed_dates[length(parsed_dates)],parsed_dates[1])/(length(parsed_dates)-1) # force equal spacing 
+      dataset = dataset[order(dataset[,1]),]
+      parsed_dates=strptime(dataset[,1],"%Y-%m-%dT%H:%M:%S",tz="UTC")
+      labTime = names(Date)[1]
       
-      if(withSeasonality==FALSE)
-        targetSeason = "none"
-      
-      myFreq = getFrequency1(parsed_dates, values = dataset[,2], tS = targetSeason, f = knownFrequency)
-      
-      
-      if(myFreq < 2)
-        withSeasonality = FALSE
-      
-      if(withSeasonality == FALSE)
+      if((any(is.na(parsed_dates))))
       {
-        maxP = maxQ = maxD = P = Q = D = 0 
+        pbiWarning1  = cutStr2Show("Wrong or corrupted 'Date'.", strCex = sizeWarn/6, partAvailable = 0.85)
+        pbiWarning2  = cutStr2Show("Only 'Date', 'Time', 'Date/Time' types are allowed without hierarchy", strCex = sizeWarn/6, partAvailable = 0.85)
+        pbiWarning = paste(pbiWarning1, pbiWarning2, pbiWarning, sep ="<br>")
+        timeSeries=ts()
+        showWarnings=TRUE
+      }
+      else
+      {
+        interval = difftime(parsed_dates[length(parsed_dates)],parsed_dates[1])/(length(parsed_dates)-1) # force equal spacing 
+        
+        if(withSeasonality==FALSE)
+          targetSeason = "none"
+        
+        myFreq = getFrequency1(parsed_dates, values = dataset[,2], tS = targetSeason, f = knownFrequency)
+        
+        
+        if(myFreq < 2)
+          withSeasonality = FALSE
+        
+        if(withSeasonality == FALSE)
+        {
+          maxP = maxQ = maxD = P = Q = D = 0 
+        }
+        
+        
+        timeSeries=ts(data = dataset[,2], start=1, frequency = round(myFreq))
       }
       
-      
-      timeSeries=ts(data = dataset[,2], start=1, frequency = round(myFreq))
     }
-    
-    
   }
 }
 
@@ -733,10 +738,10 @@ if(length(timeSeries)>=minPoints) {
         upper2 = as.numeric(prediction$upper[,2])
       }
       else
-        {  
-          lower1 = lower2 = as.numeric(prediction$lower[,1])
-          upper1 =upper2 = as.numeric(prediction$upper[,1])
-        } 
+      {  
+        lower1 = lower2 = as.numeric(prediction$lower[,1])
+        upper1 =upper2 = as.numeric(prediction$upper[,1])
+      } 
       
       
       id = x2
@@ -744,7 +749,7 @@ if(length(timeSeries)>=minPoints) {
       names(lower2) = names(upper2) = names(lower1) = names(upper1)=  names(f_full) = id 
       cf_full = as.character(f_full)
       
-     
+      
       p1a <- p1a + geom_ribbon( inherit.aes = FALSE , mapping = aes(x = id, ymin = lower2, ymax = upper2), fill = "gray50", alpha = 0.25)
     }
     # if(upperConfInterval>0.01)
@@ -818,7 +823,7 @@ if(showWarnings && !is.null(pbiWarning))
   
   
   ggp$x$layout$margin$l = ggp$x$layout$margin$l+10
-
+  
   if(ggp$x$layout$xaxis$tickangle < -40)
     ggp$x$layout$margin$b = ggp$x$layout$margin$b+40
   
@@ -838,5 +843,5 @@ internalSaveWidget(p, 'out.html')
 
 ####################################################
 #display in R studio
-if(Sys.getenv("RSTUDIO")!="")
-  print(p)
+# if(Sys.getenv("RSTUDIO")!="")
+#   print(p)
