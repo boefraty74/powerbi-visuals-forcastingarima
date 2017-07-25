@@ -23,7 +23,7 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-module powerbi.extensibility.visual {
+module powerbi.extensibility.visual.PBI_CV_AD348DC9_41C4_4867_B19O_53F9RDC6IEAS_HTML  {
 
      // in order to improve the performance, one can update the <head> only in the initial rendering.
     // set to 'true' if you are using different packages to create the widgets
